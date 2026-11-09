@@ -6,21 +6,22 @@
 <meta name="theme-color" content="#0f131c">
 <title>Photo Gallery</title>
 <!--
-  Google Drive Photo Gallery — v6 ("Atelier Dark" design)
+  Google Drive Photo Gallery — v7 ("Atelier Dark" design)
   (c) Nick Aden
 
-  SETUP: fill in the CONFIG block below (see PANDUAN_v6.md).
-  The folder can also be changed via URL:  galeri_drive_v6.html?folder=FOLDER_ID&title=Infant%20Baptism
+  SETUP: fill in the CONFIG block below (see PANDUAN_v7.md).
+  The folder can also be changed via URL:  galeri_drive_v7.html?folder=FOLDER_ID&title=Infant%20Baptism
 -->
 <script>
   const CONFIG = {
-    API_KEY:"",
-    FOLDER_ID: "1Wnv5NzWKi9Nv0GBAltY-dXD0EE8ipOXy",
-    ORGANIZATION: "",       // label kecil di header
-    TITLE:      "Kaderisasi Pengurus PAPS",             // judul besar di atas
-    LABEL:      "2026-2028",       // badge kecil di atas judul
-    DESCRIPTION:  "",                        // teks pengantar (opsional) di bagian Info & catatan akhir
-    LOGO_URL:   "",                        // opsional: link gambar logo (PNG/SVG)
+    SCRIPT_URL:   "https://script.google.com/macros/s/AKfycbwjlDMirW2uVtAWfAaGV3rmyZPl2lOxuK9DXK8CClmHIoZ3ZTPLk7i-FNp4J5CcAy6T/exec",                      // RECOMMENDED: Apps Script web app URL (…/exec). No API key needed.
+    API_KEY:      "",                      // (optional, legacy) Google API key — only used when SCRIPT_URL is empty
+    FOLDER_ID:    "1Wnv5NzWKi9Nv0GBAltY-dXD0EE8ipOXy",                      // Drive folder ID or full folder link (must be allowed in the script)
+    ORGANIZATION: "PAPS St. Helena",     // small label in the header
+    TITLE:        "Kaderisasi Pengurus PAPS 26/28",         // big title at the top
+    LABEL:        "By: HPDD PAPS 24/26", // small badge above the title
+    DESCRIPTION:  "",                      // optional intro text (Info panel & closing note)
+    LOGO_URL:     "",                      // optional: logo image link (PNG/SVG)
     SLIDESHOW_SECONDS: 4
   };
 </script>
@@ -597,7 +598,8 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   };
 
   // ---------- Konfigurasi ----------
-  const apiKey  = CONFIG.API_KEY || store.get("galeri_api_key");
+  const scriptUrl = (CONFIG.SCRIPT_URL || (CONFIG.API_KEY ? "" : store.get("galeri_script_url"))).trim();
+  const apiKey  = scriptUrl ? "" : (CONFIG.API_KEY || store.get("galeri_api_key"));
   const rootId  = extractId(params.get("root") || params.get("folder") || CONFIG.FOLDER_ID || store.get("galeri_folder"));
   const folderId = extractId(params.get("folder") || rootId);
   const isRoot  = folderId === rootId;
@@ -710,15 +712,15 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
     $("status").innerHTML = `
       <div class="setup">
         <h2>Set up the gallery</h2>
-        <p>Enter your API key and Google Drive folder link. For permanent use, fill in the CONFIG block inside the HTML file.</p>
-        <label class="badge-t" for="inKey">Google API key (Drive API)</label>
-        <input id="inKey" value="${esc(apiKey)}" autocomplete="off">
+        <p>Enter your Apps Script web app URL and Google Drive folder link. For permanent use, fill in the CONFIG block inside the HTML file.</p>
+        <label class="badge-t" for="inKey">Apps Script URL (…/exec)</label>
+        <input id="inKey" value="${esc(scriptUrl)}" placeholder="https://script.google.com/macros/s/…/exec" autocomplete="off">
         <label class="badge-t" for="inFolder">Folder link or ID</label>
         <input id="inFolder" placeholder="https://drive.google.com/drive/folders/…" value="${esc(rootId)}">
         <button class="chip pri" id="simpan"><span class="ms fill">play_arrow</span>Show gallery</button>
       </div>`;
     $("simpan").onclick = () => {
-      store.set("galeri_api_key", $("inKey").value.trim());
+      store.set("galeri_script_url", $("inKey").value.trim());
       store.set("galeri_folder", extractId($("inFolder").value));
       location.href = location.pathname;
     };
@@ -745,15 +747,34 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   const qImg = id => `'${id}' in parents and trashed = false and mimeType contains 'image/'`;
   const qDir = id => `'${id}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
 
-  async function muat(){
-    try {
-      const [files, dirs, info] = await Promise.all([
+  // ---------- Apps Script (disarankan) ----------
+  async function skrip(q){
+    const r = await fetch(scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + new URLSearchParams(q));
+    const t = await r.text();
+    let j;
+    try { j = JSON.parse(t); }
+    catch { throw new Error(/<html/i.test(t) ? "The script URL returned a web page instead of data. Check that it ends with /exec and is deployed with access “Anyone”." : "Invalid response from the script."); }
+    if (j.error) throw new Error(j.error);
+    return j;
+  }
+  async function ambilDaftar(){
+    if (scriptUrl) {
+      $("stats").textContent = "Loading photo list…";
+      const j = await skrip({ action: "list", folder: folderId });
+      return [j.files || [], j.folders || [], { name: j.name }];
+    }
+    return Promise.all([
         listAll(qImg(folderId),
           "nextPageToken,files(id,name,size,createdTime,thumbnailLink,imageMediaMetadata(time,width,height,rotation,cameraMake,cameraModel,aperture,exposureTime,isoSpeed,focalLength))",
           n => { $("stats").textContent = `Loading photo list… (${n})`; }),
         listAll(qDir(folderId), "nextPageToken,files(id,name)").catch(() => []),
         api("files/" + folderId, { fields: "name" }).catch(() => null)
       ]);
+  }
+
+  async function muat(){
+    try {
+      const [files, dirs, info] = await ambilDaftar();
       semua = files; subs = dirs; folderName = info?.name || "";
       semua.forEach(siapkan);
       semua.forEach(f => byId[f.id] = f);
@@ -782,7 +803,9 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
       $("stats").textContent = "Failed to load";
       $("status").className = "status err";
       $("status").innerHTML = `Couldn't load photos: ${esc(e.message)}
-        <small>Check the API key and its website restrictions, and make sure the folder is shared as “Anyone with the link”.</small>`;
+        <small>${scriptUrl
+          ? "Check the script URL, that this folder is listed in ALLOWED_FOLDERS in the script, and that the folder is shared as “Anyone with the link”."
+          : "Check the API key and its website restrictions, and make sure the folder is shared as “Anyone with the link”."}</small>`;
     }
   }
 
@@ -1069,8 +1092,9 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
       while (antre.length) {
         const s = antre.shift();
         try {
-          const j = await api("files", { q: qImg(s.id), fields: "files(id,thumbnailLink)", pageSize: "1", orderBy: "name_natural", includeItemsFromAllDrives: "true" });
-          const f = j.files?.[0];
+          const f = scriptUrl
+            ? (await skrip({ action: "cover", folder: s.id })).file
+            : (await api("files", { q: qImg(s.id), fields: "files(id,thumbnailLink)", pageSize: "1", orderBy: "name_natural", includeItemsFromAllDrives: "true" })).files?.[0];
           if (f) document.querySelectorAll(`[data-cover="${s.id}"]`).forEach(el => {
             el.insertAdjacentHTML("beforeend", img(f, 500));
             el.querySelector(".ms")?.remove();
@@ -1304,7 +1328,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   }
 
   // ---------- Mulai ----------
-  if (!apiKey || !rootId) showSetup(); else muat();
+  if (!(scriptUrl || apiKey) || !rootId) showSetup(); else muat();
 })();
 </script>
 </body>
