@@ -6,20 +6,20 @@
 <meta name="theme-color" content="#0f131c">
 <title>Photo Gallery</title>
 <!--
-  Google Drive Photo Gallery — v7 ("Atelier Dark" design)
+  Google Drive Photo Gallery — v8 ("Atelier Dark" design)
   (c) Nick Aden
 
-  SETUP: fill in the CONFIG block below (see PANDUAN_v7.md).
-  The folder can also be changed via URL:  galeri_drive_v7.html?folder=FOLDER_ID&title=Infant%20Baptism
+  SETUP: fill in the CONFIG block below (see PANDUAN_v8.md).
+  The folder can also be changed via URL:  galeri_drive_v8.html?folder=FOLDER_ID&title=Infant%20Baptism
 -->
 <script>
   const CONFIG = {
-    SCRIPT_URL:   "https://script.google.com/macros/s/AKfycbwjlDMirW2uVtAWfAaGV3rmyZPl2lOxuK9DXK8CClmHIoZ3ZTPLk7i-FNp4J5CcAy6T/exec",                      // RECOMMENDED: Apps Script web app URL (…/exec). No API key needed.
+    SCRIPT_URL:   "https://script.google.com/macros/s/AKfycbwjlDMirW2uVtAWfAaGV3rmyZPl2lOxuK9DXK8CClmHIoZ3ZTPLk7i-FNp4J5CcAy6T/exec", // Apps Script web app URL (…/exec)
     API_KEY:      "",                      // (optional, legacy) Google API key — only used when SCRIPT_URL is empty
-    FOLDER_ID:    "1Wnv5NzWKi9Nv0GBAltY-dXD0EE8ipOXy",                      // Drive folder ID or full folder link (must be allowed in the script)
-    ORGANIZATION: "PAPS St. Helena",     // small label in the header
-    TITLE:        "Kaderisasi Pengurus PAPS 26/28",         // big title at the top
-    LABEL:        "By: HPDD PAPS 24/26", // small badge above the title
+    FOLDER_ID:    "1Wnv5NzWKi9Nv0GBAltY-dXD0EE8ipOXy", // Drive folder ID or full folder link (must be allowed in the script)
+    ORGANIZATION: "PAPS St. Helena",       // small label in the header
+    TITLE:        "Kaderisasi Pengurus PAPS 26/28", // big title at the top
+    LABEL:        "By: HPDD PAPS 24/26",   // small badge above the title
     DESCRIPTION:  "",                      // optional intro text (Info panel & closing note)
     LOGO_URL:     "",                      // optional: logo image link (PNG/SVG)
     SLIDESHOW_SECONDS: 4
@@ -31,6 +31,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=arrow_back,auto_awesome,chevron_left,chevron_right,close,collections_bookmark,dashboard_customize,download,favorite,folder,folder_copy,folder_open,folder_special,grid_view,info,link,open_in_new,pause,photo_camera,photo_library,play_arrow,schedule,search,shuffle,view_quilt,zoom_in,zoom_out&display=block">
 <style>
 :root{
+  --hdr:48px; --nav:52px;
   --floor:#0b0f17; --surface:#0f131c; --c-lowest:#0a0e16; --c-low:#181c24; --c:#1c2028;
   --c-high:#262a33; --c-highest:#31353e; --bright:#353942;
   --on:#dfe2ee; --text:#f8fafc; --variant:#d8c3ad; --muted:#94a3b8; --outline:#a08e7a; --outline-v:#534434;
@@ -44,7 +45,7 @@
 *{box-sizing:border-box}
 html{background:var(--floor);-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--surface);color:var(--on);font-family:var(--sans);-webkit-font-smoothing:antialiased;
-  padding-bottom:calc(84px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
+  padding-bottom:calc(var(--nav) + 8px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
 @media (min-width:1024px){body{padding-bottom:0}}
 button{font:inherit;color:inherit}
 a{color:inherit}
@@ -60,10 +61,10 @@ a{color:inherit}
 [hidden]{display:none!important}
 
 /* ---------- Header ---------- */
-.top{position:fixed;inset:0 0 auto;z-index:50;padding-top:env(safe-area-inset-top);
+.top{position:fixed;inset:0 0 auto;z-index:50;padding-top:env(safe-area-inset-top);transition:transform .28s ease;
   background:rgba(15,19,28,.8);backdrop-filter:blur(20px) saturate(140%);-webkit-backdrop-filter:blur(20px) saturate(140%);
   border-bottom:1px solid var(--line)}
-.top-in{height:64px;display:flex;align-items:center;gap:6px}
+.top-in{height:var(--hdr);display:flex;align-items:center;gap:6px}
 .ib{width:44px;height:44px;flex:none;border-radius:999px;display:grid;place-items:center;border:0;background:transparent;
   color:var(--variant);cursor:pointer;transition:color .2s,background .2s;text-decoration:none}
 .ib:hover{color:var(--text);background:rgba(255,255,255,.06)}
@@ -84,7 +85,7 @@ a{color:inherit}
 @media (min-width:1024px){.tabs{display:flex}.top-r{margin-left:4px}#btnSearch,#btnLayout{display:none}}
 
 /* ---------- Hero ---------- */
-.hero{position:relative;margin-top:calc(64px + env(safe-area-inset-top));height:380px;overflow:hidden;background:var(--c-lowest)}
+.hero{position:relative;margin-top:calc(var(--hdr) + env(safe-area-inset-top));height:380px;overflow:hidden;background:var(--c-lowest)}
 @media (min-width:768px){.hero{height:440px}}
 @media (min-width:1200px){.hero{height:520px}}
 .slide{position:absolute;inset:0;opacity:0;transition:opacity 1.6s ease}
@@ -125,7 +126,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 @media (min-width:768px){.chips{margin:0;padding-left:0;padding-right:0}}
 
 /* ---------- Bar (tampilan + cari) ---------- */
-.bar{position:sticky;top:calc(64px + env(safe-area-inset-top));z-index:30;background:rgba(15,19,28,.9);
+.bar{position:sticky;top:calc(var(--hdr) + env(safe-area-inset-top));transition:top .28s ease;z-index:30;background:rgba(15,19,28,.9);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--line)}
 .bar-in{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;padding-top:8px;padding-bottom:8px}
 .bar-l{display:flex;flex-direction:column;gap:2px;color:var(--outline);text-transform:uppercase;letter-spacing:.08em}
@@ -334,13 +335,33 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 /* ---------- Bottom nav ---------- */
 .bnav{position:fixed;left:0;right:0;bottom:0;z-index:50;padding-bottom:env(safe-area-inset-bottom);
   background:rgba(15,19,28,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--line)}
-.bnav-in{display:flex;justify-content:space-around;align-items:center;height:76px}
-.bnav button{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:64px;padding:6px 0;background:none;border:0;
+.bnav-in{display:flex;justify-content:space-around;align-items:center;height:var(--nav)}
+.bnav button{display:flex;flex-direction:column;align-items:center;gap:2px;min-width:64px;padding:4px 0;background:none;border:0;
   color:var(--variant);font:600 12px/16px var(--sans);letter-spacing:.04em;cursor:pointer}
-.bnav button .ms{font-size:22px}
+.bnav button .ms{font-size:20px}
 .bnav button.on{color:var(--primary)}
 .bnav button.on .ms{font-variation-settings:"FILL" 1,"wght" 400,"GRAD" 0,"opsz" 24}
 @media (min-width:1024px){.bnav{display:none}}
+/* ---------- HP & tablet: bar lebih tipis + sembunyi otomatis saat menggulir ---------- */
+@media (max-width:1023px){
+  .top .ib{width:40px;height:40px}
+  .brand{gap:8px}
+  .brand .org{font-size:10px;line-height:12px}
+  .brand .ttl{font-size:15px;line-height:18px}
+  .brand .logo-ic{font-size:18px}
+  .brand img{height:26px}
+  .bnav{transition:transform .28s ease}
+  .bnav button{font-size:10px;line-height:12px;letter-spacing:.02em}
+  .bar-in{padding-top:6px;padding-bottom:6px;gap:6px 10px}
+  .seg{padding:3px}
+  .seg button{padding:5px 10px;font-size:11px}
+  .zoom .ms{font-size:16px}
+  .search,.sort{height:36px}
+  body.ui-off .top{transform:translateY(-100%)}
+  body.ui-off .bar{top:0}
+  body.ui-off .bnav{transform:translateY(100%)}
+}
+@media (min-width:1024px){:root{--hdr:64px}}
 
 /* ---------- Drawer & modal ---------- */
 .backdrop{position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
@@ -425,7 +446,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 .lb.bare .lb-top,.lb.bare .lb-sheet,.lb.bare .nav{opacity:0;pointer-events:none}
 .lb.nosheet .lb-sheet{display:none}
 
-.toast{position:fixed;left:50%;bottom:calc(100px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100;
+.toast{position:fixed;left:50%;bottom:calc(var(--nav) + 20px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:100;
   padding:10px 16px;border-radius:999px;background:var(--c-highest);color:var(--on);font:600 13px var(--sans);
   opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .toast.show{opacity:1}
@@ -993,7 +1014,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
       const lebar = (t === "a" || t === "d") && ori(f) !== "P";
       const s = sz(Math.min(innerWidth, kol.cw * (lebar ? 2 : 1)));
       // lingkaran kecil di kartu Highlight hanya bila kolom cukup lebar (tidak menutupi judul)
-      const e = t === "d" && (kol.cw >= 240 || (lebar && kol.n === 2)) ? tampil[i + 1] : null;
+      const e = t === "d" && kol.cw >= 240 ? tampil[i + 1] : null;
       const tmp = document.createElement("div");
       tmp.innerHTML = KARTU[t](f, i, s, e).trim();
       const el = tmp.firstElementChild;
@@ -1170,7 +1191,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
     view = v; tandaiNav(v);
     if (semua.length) {
       terapkan();
-      const top = $("bar").getBoundingClientRect().top + scrollY - 64;
+      const top = $("bar").getBoundingClientRect().top + scrollY - tinggiHeader();
       if (scrollY > top) scrollTo({ top, behavior: "smooth" });
     }
   }
@@ -1186,7 +1207,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   const bukaCari = () => {
     if ($("bar").hidden) return;
     $("find").classList.add("open");
-    const top = $("bar").getBoundingClientRect().top + scrollY - 64;
+    const top = $("bar").getBoundingClientRect().top + scrollY - tinggiHeader();
     if (scrollY < top) scrollTo({ top, behavior: "smooth" });
     setTimeout(() => $("cari").focus(), 250);
   };
@@ -1326,6 +1347,30 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
     const t = $("toast"); t.textContent = msg; t.classList.add("show");
     clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("show"), 1800);
   }
+
+  // ---------- Bar sembunyi otomatis di HP ----------
+  function tinggiHeader(){ return document.body.classList.contains("ui-off") ? 0 : document.querySelector(".top").offsetHeight; }
+  const mqHP = matchMedia("(max-width:1023px)");
+  let yAkhir = scrollY, uiOff = false, tick = false;
+  function setUi(off){
+    if (off === uiOff) return;
+    uiOff = off; document.body.classList.toggle("ui-off", off);
+  }
+  addEventListener("scroll", () => {
+    if (tick) return; tick = true;
+    requestAnimationFrame(() => {
+      tick = false;
+      const y = scrollY, d = y - yAkhir;
+      if (!mqHP.matches || lb.classList.contains("open") || $("drawer").classList.contains("open")) { yAkhir = y; return setUi(false); }
+      // mulai menyembunyikan setelah melewati foto judul (offsetTop elemen sticky ikut bergeser, jadi pakai hero)
+      const batas = $("hero").offsetTop + $("hero").offsetHeight;
+      if (y < batas) setUi(false);
+      else if (d > 6) setUi(true);
+      else if (d < -6) setUi(false);
+      if (Math.abs(d) > 6) yAkhir = y;
+    });
+  }, { passive: true });
+  mqHP.addEventListener?.("change", () => setUi(false));
 
   // ---------- Mulai ----------
   if (!(scriptUrl || apiKey) || !rootId) showSetup(); else muat();
