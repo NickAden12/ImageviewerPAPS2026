@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#0f131c">
 <title>Photo Gallery</title>
 <!--
-  Google Drive Photo Gallery — v9 ("Atelier Dark" design, password protected)
+  Google Drive Photo Gallery — v10 ("Atelier Dark" design, password protected)
   (c) Nick Aden
 
-  SETUP: fill in the CONFIG block below (see PANDUAN_v9.md).
-  The folder can also be changed via URL:  galeri_drive_v9.html?folder=FOLDER_ID&title=Infant%20Baptism
+  SETUP: fill in the CONFIG block below (see PANDUAN_v10.md).
+  The folder can also be changed via URL:  galeri_drive_v10.html?folder=FOLDER_ID&title=Infant%20Baptism
 -->
 <script>
   const CONFIG = {
@@ -96,6 +96,7 @@ a{color:inherit}
 .slide.on{opacity:1}
 .slide img{width:100%;height:100%;object-fit:cover;transform:scale(1);transition:transform 9s linear}
 .slide.on img{transform:scale(1.04)}
+.slide.reset img{transition:none;transform:scale(1)}
 .scrim{position:absolute;inset:0;background:linear-gradient(to top,var(--surface) 0%,rgba(15,19,28,.72) 40%,rgba(15,19,28,.22) 100%)}
 @media (min-width:1024px){.scrim{background:linear-gradient(to top,var(--surface) 0%,rgba(15,19,28,.55) 40%,rgba(15,19,28,.15) 100%),
   linear-gradient(to right,rgba(15,19,28,.75),rgba(15,19,28,0) 65%)}}
@@ -885,6 +886,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
         bukaDariHash();
       } else {
         albumGrid();
+        heroDariAlbum();
       }
       tulisCatatan();
     } catch (e) {
@@ -920,8 +922,9 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     $("judul").textContent = t;
     document.title = isRoot ? judul : `${t} · ${judul}`;
     $("path").textContent = isRoot ? (folderName || judul) : `${judul} / ${folderName}`;
-    const parts = [`<b>${semua.length} ${semua.length === 1 ? "Photo" : "Photos"}</b>`];
-    if (subs.length) parts.push(`${subs.length} ${subs.length === 1 ? "Album" : "Albums"}`);
+    const parts = [];
+    if (semua.length || !subs.length) parts.push(`<b>${semua.length} ${semua.length === 1 ? "Photo" : "Photos"}</b>`);
+    if (subs.length) parts.push(`${parts.length ? "" : "<b>"}${subs.length} ${subs.length === 1 ? "Album" : "Albums"}${parts.length ? "" : "</b>"}`);
     const tot = semua.reduce((a, f) => a + (+f.size || 0), 0);
     if (tot) parts.push(fSize(tot));
     $("stats").innerHTML = parts.join('<span class="dot"></span>');
@@ -937,22 +940,86 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     const a = new Date(Math.min(...ts)), b = new Date(Math.max(...ts));
     return a.toDateString() === b.toDateString() ? fTgl.format(a) : `${fTgl.format(a)} – ${fTgl.format(b)}`;
   }
-  function heroSlides(){
-    const kandidat = semua.filter(f => f._ar >= 1.2).sort(() => Math.random() - .5);
-    const lain = semua.filter(f => f._ar < 1.2).sort(() => Math.random() - .5);
-    const pilih = kandidat.concat(lain).slice(0, 5);
-    // resolusi mengikuti lebar layar x kepadatan piksel, cukup untuk efek zoom pelan
+  // ---------- Slideshow latar judul ----------
+  // Bergilir dari seluruh kumpulan foto (acak tanpa pengulangan sampai semua tampil),
+  // hanya memuat 1 foto berikutnya, dan berhenti saat judul tidak terlihat / tab tidak aktif.
+  const HERO_DETIK = 6.5;
+  const hero = { deck: [], pool: [], layers: [], cur: 0, siap: false, last: "", jalan: false, t: null, terlihat: true };
+  const heroW = () => {
     const hh = $("hero").clientHeight || 520;
-    const w = Math.min(3200, Math.ceil(Math.max(innerWidth, hh * 1.9) * Math.max(1, devicePixelRatio || 1) * 1.08 / 200) * 200);
-    $("slides").innerHTML = pilih.map((f, i) =>
-      `<div class="slide${i ? "" : " on"}"><img src="${esc(full(f, w))}" data-fb="${esc(thumbFb(f, w))}" alt="" referrerpolicy="no-referrer"${i ? ' loading="lazy"' : ""}></div>`).join("");
-    if (pilih.length < 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    let k = 0;
-    const s = $("slides").children;
-    heroTimer = setInterval(() => {
-      if (document.hidden) return;
-      s[k].classList.remove("on"); k = (k + 1) % s.length; s[k].classList.add("on");
-    }, 6500);
+    return Math.min(3200, Math.ceil(Math.max(innerWidth, hh * 1.9) * Math.max(1, devicePixelRatio || 1) * 1.08 / 200) * 200);
+  };
+  function heroAmbil(){
+    if (!hero.deck.length) {
+      hero.deck = hero.pool.slice();
+      for (let i = hero.deck.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [hero.deck[i], hero.deck[j]] = [hero.deck[j], hero.deck[i]]; }
+      // jangan langsung mengulang foto terakhir saat kartu dikocok ulang
+      if (hero.deck.length > 1 && hero.deck[hero.deck.length - 1].id === hero.last) hero.deck.unshift(hero.deck.pop());
+    }
+    const f = hero.deck.pop(); hero.last = f.id; return f;
+  }
+  function heroMuat(layer){
+    const im = layer.querySelector("img");
+    return new Promise(res => {
+      let coba = 0;
+      const lanjut = () => {
+        if (coba++ >= 3) return res(false);
+        const f = heroAmbil(), w = heroW();
+        let fb = false;
+        im.onload = () => (im.decode ? im.decode().catch(() => {}) : Promise.resolve()).then(() => res(true));
+        im.onerror = () => { if (!fb) { fb = true; im.src = thumbFb(f, w); } else lanjut(); };
+        im.src = full(f, w);
+      };
+      lanjut();
+    });
+  }
+  function heroJadwal(){
+    clearTimeout(hero.t);
+    if (!hero.jalan) return;
+    hero.t = setTimeout(heroGanti, HERO_DETIK * 1000);
+  }
+  async function heroGanti(){
+    if (document.hidden || !hero.terlihat) { hero.t = null; return; }      // dilanjutkan saat terlihat lagi
+    if (!hero.siap) return heroJadwal();                                      // foto berikutnya belum selesai dimuat
+    const lama = hero.layers[hero.cur], baru = hero.layers[1 - hero.cur];
+    baru.classList.remove("reset"); baru.classList.add("on"); lama.classList.remove("on");
+    hero.cur = 1 - hero.cur; hero.siap = false;
+    heroJadwal();
+    // setelah transisi selesai, layer lama dipakai untuk memuat foto berikutnya
+    setTimeout(async () => { lama.classList.add("reset"); hero.siap = await heroMuat(lama); }, 1800);
+  }
+  async function heroMulai(pool){
+    pool = (pool || []).filter(Boolean);
+    if (!pool.length) return;
+    const lebar = pool.filter(f => (f._ar || 4 / 3) >= 1.2);
+    hero.pool = lebar.length >= 8 ? lebar : pool;
+    hero.deck = []; hero.cur = 0; hero.siap = false;
+    $("slides").innerHTML = `<div class="slide"><img alt="" referrerpolicy="no-referrer"></div><div class="slide reset"><img alt="" referrerpolicy="no-referrer"></div>`;
+    hero.layers = [...$("slides").children];
+    if (!(await heroMuat(hero.layers[0]))) return;
+    hero.layers[0].classList.add("on");
+    if (hero.pool.length < 2 || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    hero.jalan = true;
+    hero.siap = await heroMuat(hero.layers[1]);
+    heroJadwal();
+  }
+  new IntersectionObserver(es => {
+    hero.terlihat = es[0].isIntersecting;
+    if (hero.terlihat && hero.jalan && !hero.t) heroJadwal();
+  }, { threshold: 0.05 }).observe($("hero"));
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && hero.jalan && !hero.t) heroJadwal(); });
+  function heroSlides(){ heroMulai(semua); }
+  // halaman utama tanpa foto langsung: ambil foto acak dari album-album di dalamnya
+  async function heroDariAlbum(){
+    if (scriptUrl) {
+      try {
+        const j = await skrip({ action: "hero", folder: folderId });
+        const fs = (j.files || []); fs.forEach(siapkan);
+        if (fs.length) return heroMulai(fs);
+      } catch {}
+    }
+    await muatSampul();            // cadangan (script lama): pakai sampul tiap album
+    heroMulai(sampulFiles);
   }
 
   // ---------- Filter, urut, render ----------
@@ -1172,10 +1239,12 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (id === rootId) p.delete("root"); else p.set("root", rootId);
     return "?" + p.toString();
   }
-  let sampulDimuat = false;
-  async function muatSampul(){
-    if (sampulDimuat) return;
-    sampulDimuat = true;
+  const sampulFiles = [];
+  let sampulJanji = null;
+  function muatSampul(){
+    return sampulJanji || (sampulJanji = muatSampulIsi());
+  }
+  async function muatSampulIsi(){
     const antre = subs.slice(0, 60);
     const kerja = async () => {
       while (antre.length) {
@@ -1184,6 +1253,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
           const f = scriptUrl
             ? (await skrip({ action: "cover", folder: s.id })).file
             : (await api("files", { q: qImg(s.id), fields: "files(id,thumbnailLink)", pageSize: "1", orderBy: "name_natural", includeItemsFromAllDrives: "true" })).files?.[0];
+          if (f) sampulFiles.push(f);
           if (f) document.querySelectorAll(`[data-cover="${s.id}"]`).forEach(el => {
             el.insertAdjacentHTML("beforeend", img(f, 500));
             el.querySelector(".ms")?.remove();
