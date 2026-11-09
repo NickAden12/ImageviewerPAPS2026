@@ -6,11 +6,11 @@
 <meta name="theme-color" content="#0f131c">
 <title>Photo Gallery</title>
 <!--
-  Google Drive Photo Gallery — v10 ("Atelier Dark" design, password protected)
+  Google Drive Photo Gallery — v11 ("Atelier Dark" design, password protected, photos + videos)
   (c) Nick Aden
 
-  SETUP: fill in the CONFIG block below (see PANDUAN_v10.md).
-  The folder can also be changed via URL:  galeri_drive_v10.html?folder=FOLDER_ID&title=Infant%20Baptism
+  SETUP: fill in the CONFIG block below (see PANDUAN_v11.md).
+  The folder can also be changed via URL:  galeri_drive_v11.html?folder=FOLDER_ID&title=Infant%20Baptism
 -->
 <script>
   const CONFIG = {
@@ -32,7 +32,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=arrow_back,auto_awesome,chevron_left,chevron_right,close,collections_bookmark,dashboard_customize,download,favorite,folder,folder_copy,folder_open,folder_special,grid_view,info,key,link,lock,lock_open,open_in_new,pause,photo_camera,photo_library,play_arrow,schedule,search,shuffle,view_quilt,visibility,visibility_off,zoom_in,zoom_out&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=arrow_back,auto_awesome,chevron_left,chevron_right,close,collections_bookmark,dashboard_customize,download,favorite,folder,folder_copy,folder_open,folder_special,grid_view,info,key,link,lock,lock_open,open_in_new,pause,photo_camera,photo_library,play_arrow,play_circle,schedule,search,shuffle,smart_display,videocam,view_quilt,visibility,visibility_off,zoom_in,zoom_out&display=block">
 <style>
 :root{
   --hdr:48px; --nav:52px;
@@ -428,6 +428,17 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 .lb-stage{flex:1;min-height:0;position:relative;display:flex;align-items:center;justify-content:center;touch-action:pan-y;overflow:hidden}
 .lb-stage img{max-width:calc(100% - 16px);max-height:100%;object-fit:contain;user-select:none;-webkit-user-drag:none;transition:opacity .25s;border-radius:4px}
 .lb-stage img.loading{opacity:.25}
+.lb-vid{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:0 8px}
+.lb-vid video{max-width:100%;max-height:100%;width:auto;height:auto;border-radius:6px;background:#000;outline:0}
+.lb-vid iframe{width:min(100%,calc((100vh - 220px) * 16 / 9));aspect-ratio:16/9;max-height:100%;border:0;border-radius:6px;background:#000}
+.lb.vid .nav{top:40%}
+.vbadge{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;
+  padding:6px 12px 6px 8px;border-radius:999px;background:rgba(10,14,22,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  color:#fff;font:600 12px/16px var(--mono);pointer-events:none;box-shadow:0 0 0 1px rgba(255,255,255,.12);z-index:1}
+.vbadge .ms{font-size:20px;color:var(--primary)}
+.gcard .vbadge{padding:4px 8px 4px 4px;font-size:10px}
+.gcard .vbadge .ms{font-size:16px}
+.strip img.v{outline:2px dashed rgba(255,193,116,.55);outline-offset:-2px}
 .lb .spin{position:absolute;margin:0;display:none}
 .lb .spin.show{display:block}
 .nav{position:absolute;top:50%;transform:translateY(-50%);width:48px;height:48px;border-radius:50%;display:grid;place-items:center;
@@ -547,6 +558,11 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   <div class="wrap bar-in">
     <div class="find" id="find">
       <label class="search"><span class="ms">search</span><input type="search" id="cari" placeholder="Search file names…" aria-label="Search file names"></label>
+      <select class="sort" id="jenis" aria-label="Show" hidden>
+        <option value="">All</option>
+        <option value="foto">Photos</option>
+        <option value="video">Videos</option>
+      </select>
       <select class="sort" id="urut" aria-label="Sort">
         <option value="nama">Name A–Z</option>
         <option value="nama-desc">Name Z–A</option>
@@ -617,14 +633,16 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
       <button class="ib" id="lbSlide" aria-label="Slideshow"><span class="ms fill">play_arrow</span></button>
       <button class="ib" id="lbFav" aria-label="Favorite"><span class="ms">favorite</span></button>
       <button class="ib" id="lbInfo" aria-label="Details"><span class="ms">info</span></button>
-      <a class="ib" id="lbDownload" target="_blank" rel="noopener" aria-label="Download"><span class="ms">download</span></a>
+      <a class="ib" id="lbDownload" target="_blank" rel="noopener" aria-label="Download" title="Download original"><span class="ms">download</span></a>
       <a class="ib hide-sm" id="lbDrive" target="_blank" rel="noopener" aria-label="Open in Drive"><span class="ms">open_in_new</span></a>
       <button class="ib" id="lbShare" aria-label="Copy link"><span class="ms">link</span></button>
+      <button class="ib" id="lbPlayer" aria-label="Switch video player" title="Switch video player" hidden><span class="ms">smart_display</span></button>
     </div>
   </div>
   <div class="lb-stage" id="lbStage">
     <div class="spin" id="lbSpin"></div>
     <img id="lbImg" alt="">
+    <div class="lb-vid" id="lbVid" hidden></div>
     <button class="nav prev glass" id="lbPrev" aria-label="Previous"><span class="ms">chevron_left</span></button>
     <button class="nav next glass" id="lbNext" aria-label="Next"><span class="ms">chevron_right</span></button>
   </div>
@@ -750,7 +768,19 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (m.width && m.height) { o.dim = m.width + "×" + m.height; o.mp = Math.round(m.width * m.height / 1e6) + "MP"; }
     return o;
   }
-  const exif = (f, keys) => keys.map(k => f._m[k]).filter(Boolean).join(" • ");
+  const exif = (f, keys) => f._vid
+    ? [f._m.dur, f._m.vid].filter(Boolean).join(" • ")
+    : keys.map(k => f._m[k]).filter(Boolean).join(" • ");
+  const durasi = ms => { const t = Math.round(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, d = t % 60;
+    return (h ? h + ":" + String(m).padStart(2, "0") : m) + ":" + String(d).padStart(2, "0"); };
+  // lencana video di atas thumbnail
+  const vb = f => f._vid ? `<span class="vbadge"><span class="ms fill">play_arrow</span>${f._dur ? durasi(f._dur) : ""}</span>` : "";
+  const jumlahTeks = (arr) => {
+    const v = arr.filter(f => f._vid).length, p = arr.length - v, o = [];
+    if (p || !v) o.push(`${p} ${p === 1 ? "photo" : "photos"}`);
+    if (v) o.push(`${v} ${v === 1 ? "video" : "videos"}`);
+    return o.join(" • ");
+  };
 
   // ---------- State ----------
   let semua = [], tampil = [], subs = [], folderName = "", byId = {};
@@ -833,6 +863,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     return out;
   }
   const qImg = id => `'${id}' in parents and trashed = false and mimeType contains 'image/'`;
+  const qMedia = id => `'${id}' in parents and trashed = false and (mimeType contains 'image/' or mimeType contains 'video/')`;
   const qDir = id => `'${id}' in parents and trashed = false and mimeType = 'application/vnd.google-apps.folder'`;
 
   // ---------- Apps Script (disarankan) ----------
@@ -853,8 +884,8 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
       return [j.files || [], j.folders || [], { name: j.name }];
     }
     return Promise.all([
-        listAll(qImg(folderId),
-          "nextPageToken,files(id,name,size,createdTime,thumbnailLink,imageMediaMetadata(time,width,height,rotation,cameraMake,cameraModel,aperture,exposureTime,isoSpeed,focalLength))",
+        listAll(qMedia(folderId),
+          "nextPageToken,files(id,name,mimeType,size,createdTime,thumbnailLink,videoMediaMetadata(width,height,durationMillis),imageMediaMetadata(time,width,height,rotation,cameraMake,cameraModel,aperture,exposureTime,isoSpeed,focalLength))",
           n => { $("stats").textContent = `Loading photo list… (${n})`; }),
         listAll(qDir(folderId), "nextPageToken,files(id,name)").catch(() => []),
         api("files/" + folderId, { fields: "name" }).catch(() => null)
@@ -879,6 +910,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
         $("bar").hidden = false;
         $("chips").hidden = false;
         $("urut").value = store.get("galeri_urut") || "nama";
+        $("jenis").hidden = !semua.some(f => f._vid) || semua.every(f => f._vid);
         if ($("urut").value === "acak") acakUlang();
         setLayout(layout, false);
         terapkan();
@@ -901,7 +933,8 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   }
 
   function siapkan(f){
-    const m = f.imageMediaMetadata || {};
+    f._vid = /^video\//.test(f.mimeType || "") || /\.(mp4|m4v|mov|webm|mts|m2ts)$/i.test(f.name);
+    const m = f._vid ? (f.videoMediaMetadata || {}) : (f.imageMediaMetadata || {});
     f._exifT = false; f._t = 0;
     if (m.time) {
       const d = new Date(m.time.replace(/^(\d{4}):(\d{2}):(\d{2})/, "$1-$2-$3").replace(" ", "T"));
@@ -913,6 +946,13 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     f._ar = w && h ? Math.min(2.4, Math.max(0.45, w / h)) : 4 / 3;
     f._n = f.name.toLowerCase();
     f._m = meta(f);
+    if (f._vid) {
+      const v = f.videoMediaMetadata || {};
+      f._dur = +v.durationMillis || 0;
+      if (v.width && v.height) f._m.dim = `${v.width}×${v.height}`;
+      if (f._dur) f._m.dur = durasi(f._dur);
+      f._m.vid = (v.height ? (Math.min(v.width, v.height) >= 1080 ? "1080p" : Math.min(v.width, v.height) + "p") : "Video");
+    }
     f._r = Math.random();
   }
 
@@ -923,7 +963,9 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     document.title = isRoot ? judul : `${t} · ${judul}`;
     $("path").textContent = isRoot ? (folderName || judul) : `${judul} / ${folderName}`;
     const parts = [];
-    if (semua.length || !subs.length) parts.push(`<b>${semua.length} ${semua.length === 1 ? "Photo" : "Photos"}</b>`);
+    const nV = semua.filter(f => f._vid).length, nP = semua.length - nV;
+    if (nP || !subs.length && !nV) parts.push(`<b>${nP} ${nP === 1 ? "Photo" : "Photos"}</b>`);
+    if (nV) parts.push(`${parts.length ? "" : "<b>"}${nV} ${nV === 1 ? "Video" : "Videos"}${parts.length ? "" : "</b>"}`);
     if (subs.length) parts.push(`${parts.length ? "" : "<b>"}${subs.length} ${subs.length === 1 ? "Album" : "Albums"}${parts.length ? "" : "</b>"}`);
     const tot = semua.reduce((a, f) => a + (+f.size || 0), 0);
     if (tot) parts.push(fSize(tot));
@@ -932,7 +974,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (r) { $("when").hidden = false; $("when").lastElementChild.textContent = r; }
     $("heroAlbum").hidden = !subs.length && isRoot;
     $("curName").textContent = folderName || judul;
-    $("curStat").textContent = `${semua.length} photos` + (tot ? " • " + fSize(tot) : "") + (subs.length ? ` • ${subs.length} albums` : "");
+    $("curStat").textContent = jumlahTeks(semua) + (tot ? " • " + fSize(tot) : "") + (subs.length ? ` • ${subs.length} albums` : "");
   }
   function rentang(){
     const ts = semua.map(f => f._t).filter(Boolean);
@@ -1008,13 +1050,14 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (hero.terlihat && hero.jalan && !hero.t) heroJadwal();
   }, { threshold: 0.05 }).observe($("hero"));
   document.addEventListener("visibilitychange", () => { if (!document.hidden && hero.jalan && !hero.t) heroJadwal(); });
-  function heroSlides(){ heroMulai(semua); }
+  function heroSlides(){ heroMulai(semua.filter(f => !f._vid)); }
   // halaman utama tanpa foto langsung: ambil foto acak dari album-album di dalamnya
   async function heroDariAlbum(){
     if (scriptUrl) {
       try {
         const j = await skrip({ action: "hero", folder: folderId });
         const fs = (j.files || []); fs.forEach(siapkan);
+        fs.splice(0, fs.length, ...fs.filter(f => !f._vid));
         if (fs.length) return heroMulai(fs);
       } catch {}
     }
@@ -1036,13 +1079,14 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   function terapkan(){
     const q = $("cari").value.trim().toLowerCase();
     let src = view === "favorit" ? semua.filter(f => favs.has(f.id)) : semua;
-    tampil = src.filter(f => !q || f._n.includes(q)).sort(urutan[$("urut").value] || urutan.nama);
+    const jn = $("jenis").value;
+    tampil = src.filter(f => (!q || f._n.includes(q)) && (!jn || (jn === "video") === !!f._vid)).sort(urutan[$("urut").value] || urutan.nama);
     const g = $("gallery");
     g.innerHTML = ""; g.className = "";
     dirender = 0;
     $("cnt").textContent = $("cnt2").textContent = view === "favorit"
       ? `${tampil.length} favorites`
-      : q ? `${tampil.length} of ${semua.length}` : `${semua.length} photos`;
+      : (q || jn) ? `${tampil.length} of ${semua.length}` : jumlahTeks(semua);
     if (!tampil.length) {
       g.innerHTML = view === "favorit" && !q
         ? `<div class="empty"><span class="ms">favorite</span>No favorites yet.<br>Tap the heart on a photo to save it here.<br><small>(Favorites are saved on this device only.)</small></div>`
@@ -1084,7 +1128,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   const kolKolom = () => Math.max(1, Math.min(6, masDasar() + ZOOM.mas[zoom]));
   let kol = null;
   const frm = (f, s, cls = "", attr = "") =>
-    `<div class="frame${cls ? " " + cls : ""}" style="--ar:${f._ar.toFixed(4)}"${attr}>${img(f, s)}`;
+    `<div class="frame${cls ? " " + cls : ""}" style="--ar:${f._ar.toFixed(4)}"${attr}>${img(f, s)}${vb(f)}`;
   const KARTU = {
     a: (f, i, s) => `<article class="card ca" data-i="${i}">${frm(f, s)}<div class="grad both"></div>
         <div class="ov-top"><span class="ph badge-t">${nomor(i)}</span>${favBtn(f)}</div>
@@ -1190,7 +1234,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
       for (let j = 1; j < masH.length; j++) if (masH[j] < masH[k] - 1e-6) k = j;
       const el = document.createElement("article");
       el.className = "mcard"; el.dataset.i = i;
-      el.innerHTML = `<div class="frame" style="aspect-ratio:${f._ar}">${img(f, masS)}</div><div class="grad"></div>${favBtn(f, "sm")}
+      el.innerHTML = `<div class="frame" style="aspect-ratio:${f._ar}">${img(f, masS)}${vb(f)}</div><div class="grad"></div>${favBtn(f, "sm")}
         <div class="ov-bot"><div><p class="t2">${esc(nama(f))}</p><p class="sub mono" style="font-size:10px">${esc(exif(f, ["ap", "exp", "iso"]) || tglFoto(f))}</p></div></div>`;
       masCols[k].appendChild(el);
       masH[k] += 1 / f._ar + .06;
@@ -1226,7 +1270,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     let h = "";
     for (let i = dirender; i < end; i++) {
       const f = tampil[i];
-      h += `<div class="gcard" data-i="${i}" title="${esc(f.name)}"><div class="frame">${img(f, gS)}</div>${favBtn(f)}</div>`;
+      h += `<div class="gcard" data-i="${i}" title="${esc(f.name)}"><div class="frame">${img(f, gS)}${vb(f)}</div>${favBtn(f)}</div>`;
     }
     $("gallery").insertAdjacentHTML("beforeend", h);
     dirender = end;
@@ -1297,7 +1341,8 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     return { kamera, iso: isos.length ? `${Math.min(...isos)}–${Math.max(...isos)}` : "", tot };
   }
   function bukaInfo(){
-    const r = ringkasan(), rows = [["Photos", semua.length]];
+    const r = ringkasan(), nV = semua.filter(f => f._vid).length, rows = [["Photos", semua.length - nV]];
+    if (nV) rows.push(["Videos", nV]);
     if (subs.length) rows.push(["Sub-albums", subs.length]);
     const rg = rentang(); if (rg) rows.push(["Date", rg]);
     if (r.kamera.length) rows.push([r.kamera.length > 1 ? "Cameras" : "Camera", r.kamera.join(", ")]);
@@ -1317,7 +1362,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     const baris = [r.iso && "ISO " + r.iso, r.kamera.slice(0, 2).join(" & ")].filter(Boolean);
     $("note").innerHTML = `<div class="note"><span class="ms">auto_awesome</span>
       <h3>${esc(org ? "Documented by " + org : $("judul").textContent)}</h3>
-      ${CONFIG.DESCRIPTION ? `<p>${esc(CONFIG.DESCRIPTION)}</p>` : `<p>${esc(semua.length + " photos" + (rentang() ? " · " + rentang() : ""))}</p>`}
+      ${CONFIG.DESCRIPTION ? `<p>${esc(CONFIG.DESCRIPTION)}</p>` : `<p>${esc(jumlahTeks(semua) + (rentang() ? " · " + rentang() : ""))}</p>`}
       ${baris.length ? `<div class="mono">${baris.map(esc).join("<span>•</span>")}</div>` : ""}</div>`;
   }
 
@@ -1352,7 +1397,10 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   $("btnSearch").onclick = () => $("find").classList.contains("open") && !$("cari").value ? $("find").classList.remove("open") : bukaCari();
   $("chipSearch").onclick = bukaCari;
   $("chipShuffle").onclick = () => { acakUlang(); $("urut").value = "acak"; store.set("galeri_urut", "acak"); terapkan(); toast("Order shuffled"); };
-  $("chipSlide").onclick = () => { if (tampil.length) { buka(0); toggleSlide(true); } };
+  $("chipSlide").onclick = () => {
+    const j = tampil.findIndex(f => !f._vid);
+    if (j >= 0) { buka(j); toggleSlide(true); }
+  };
   $("chipInfo").onclick = () => setView("info");
   $("heroAlbum").onclick = () => setView("album");
   $("btnAlbum").onclick = () => setView("album");
@@ -1361,6 +1409,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   $("backdrop").onclick = tutupPanel;
   let deb;
   $("cari").addEventListener("input", () => { clearTimeout(deb); deb = setTimeout(terapkan, 200); });
+  $("jenis").addEventListener("change", terapkan);
   $("urut").addEventListener("change", () => { if ($("urut").value === "acak") acakUlang(); store.set("galeri_urut", $("urut").value); terapkan(); });
 
   // ---------- Favorit ----------
@@ -1385,17 +1434,63 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   // ---------- Lightbox ----------
   const lb = $("lb"), lbImg = $("lbImg");
   lbImg.referrerPolicy = "no-referrer";
+  // ---------- Video ----------
+  // 1) pemutar bawaan browser langsung dari Drive (MP4 H.264/AAC)
+  // 2) bila gagal / tidak termuat dalam 10 detik: pemutar Google Drive (iframe)
+  const vidSrc = f => `https://drive.usercontent.google.com/download?id=${f.id}&export=download&confirm=t`;
+  const vidPreview = f => `https://drive.google.com/file/d/${f.id}/preview`;
+  let vidTimer = null, vidMode = store.get("galeri_vplayer") || "auto";
+  function hentikanVideo(){
+    clearTimeout(vidTimer);
+    const v = $("lbVid").querySelector("video");
+    if (v) { v.pause(); v.removeAttribute("src"); v.load(); }
+    $("lbVid").innerHTML = ""; $("lbVid").hidden = true;
+    lb.classList.remove("vid");
+  }
+  function putarDrive(f, note){
+    clearTimeout(vidTimer);
+    $("lbVid").innerHTML = `<iframe src="${esc(vidPreview(f))}" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen referrerpolicy="no-referrer"></iframe>`;
+    $("lbSpin").classList.remove("show");
+    $("lbPlayer").dataset.mode = "drive";
+    if (note) toast(note);
+  }
+  function putarVideo(f){
+    lb.classList.add("vid");
+    $("lbVid").hidden = false;
+    $("lbPlayer").hidden = false;
+    if (vidMode === "drive") return putarDrive(f);
+    $("lbPlayer").dataset.mode = "native";
+    const poster = thumb(f, 1280);
+    $("lbVid").innerHTML = `<video controls playsinline preload="metadata" poster="${esc(poster)}"></video>`;
+    const v = $("lbVid").querySelector("video");
+    let siap = false;
+    v.addEventListener("loadedmetadata", () => { siap = true; clearTimeout(vidTimer); $("lbSpin").classList.remove("show"); }, { once: true });
+    v.addEventListener("error", () => { if (tampil[idx] === f) putarDrive(f, "Using Google Drive player"); }, { once: true });
+    vidTimer = setTimeout(() => { if (!siap && tampil[idx] === f) putarDrive(f, "Using Google Drive player"); }, 10000);
+    v.src = vidSrc(f);
+    v.play().catch(() => {});
+  }
+  $("lbPlayer").onclick = () => {
+    const f = tampil[idx]; if (!f?._vid) return;
+    vidMode = $("lbPlayer").dataset.mode === "drive" ? "native" : "drive";
+    store.set("galeri_vplayer", vidMode === "drive" ? "drive" : "auto");
+    hentikanVideo(); putarVideo(f);
+    toast(vidMode === "drive" ? "Google Drive player" : "Built-in player");
+  };
+
   function buka(i){
     if (i < 0 || i >= tampil.length) return;
     idx = i;
     const f = tampil[i], w = viewW();
+    hentikanVideo();
+    $("lbPlayer").hidden = !f._vid;
     if (!lb.classList.contains("open")) { lb.classList.add("open"); document.body.style.overflow = "hidden"; }
     $("lbCnt").textContent = `${i + 1} / ${tampil.length}`;
     $("lbName").textContent = f.name;
     $("lbTitle").textContent = nama(f);
     $("lbDate").textContent = f._t ? (f._exifT ? fTglP.format(f._t) + " · " + fJam.format(f._t) : fTglP.format(f._t)) : "";
     const m = f._m;
-    $("lbPills").innerHTML = [[m.cam, 1], [m.fl], [m.ap, 1], [m.exp], [m.iso], [m.dim], [fSize(+f.size)]]
+    $("lbPills").innerHTML = (f._vid ? [["Video", 1], [m.dur], [m.dim], [fSize(+f.size)]] : [[m.cam, 1], [m.fl], [m.ap, 1], [m.exp], [m.iso], [m.dim], [fSize(+f.size)]])
       .filter(x => x[0]).map(([v, a]) => `<span class="pill${a ? " a" : ""}">${esc(v)}</span>`).join("");
     $("lbFav").classList.toggle("on", favs.has(f.id));
     $("lbDownload").href = downloadUrl(f);
@@ -1409,15 +1504,16 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
       else $("lbSpin").classList.remove("show");
     };
     lbImg.alt = f.name;
-    lbImg.src = full(f, w);
     history.replaceState(null, "", location.pathname + location.search + "#photo=" + f.id);
     stripIsi();
-    [i + 1, i - 1].forEach(j => { if (tampil[j]) { const p = new Image(); p.referrerPolicy = "no-referrer"; p.src = full(tampil[j], w); } });
+    if (f._vid) { lbImg.removeAttribute("src"); lbImg.hidden = true; putarVideo(f); }
+    else { lbImg.hidden = false; lbImg.src = full(f, w); }
+    [i + 1, i - 1].forEach(j => { if (tampil[j] && !tampil[j]._vid) { const p = new Image(); p.referrerPolicy = "no-referrer"; p.src = full(tampil[j], w); } });
   }
   function stripIsi(){
     const a = Math.max(0, idx - 30), b = Math.min(tampil.length, idx + 31);
     let h = "";
-    for (let j = a; j < b; j++) h += img(tampil[j], 160, ` data-j="${j}"${j === idx ? ' class="now"' : ""}`).replace(' loading="lazy"', "");
+    for (let j = a; j < b; j++) h += img(tampil[j], 160, ` data-j="${j}" class="${j === idx ? "now" : ""}${tampil[j]._vid ? " v" : ""}"`).replace(' loading="lazy"', "");
     $("strip").innerHTML = h;
     const c = $("strip").querySelector(".now");
     if (c) $("strip").scrollLeft = c.offsetLeft - $("strip").clientWidth / 2 + c.offsetWidth / 2;
@@ -1425,6 +1521,7 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
   $("strip").addEventListener("click", e => { const t = e.target.closest("[data-j]"); if (t) { toggleSlide(false); buka(+t.dataset.j); } });
   function tutup(){
     toggleSlide(false);
+    hentikanVideo();
     lb.classList.remove("open", "bare");
     document.body.style.overflow = "";
     history.replaceState(null, "", location.pathname + location.search);
@@ -1432,10 +1529,18 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (el) { const r = el.getBoundingClientRect(); if (r.top < 120 || r.bottom > innerHeight) el.scrollIntoView({ block: "center" }); }
   }
   const geser = d => { if (tampil.length) buka((idx + d + tampil.length) % tampil.length); };
+  // slideshow hanya foto: lewati video
+  function lompatFoto(d){
+    for (let k = 1; k <= tampil.length; k++) {
+      const j = (idx + d * k + tampil.length * k) % tampil.length;
+      if (!tampil[j]._vid) return buka(j);
+    }
+    toggleSlide(false);
+  }
   function toggleSlide(on){
     on = on ?? !slideTimer;
     clearInterval(slideTimer); slideTimer = null;
-    if (on) slideTimer = setInterval(() => geser(1), CONFIG.SLIDESHOW_SECONDS * 1000);
+    if (on) slideTimer = setInterval(() => lompatFoto(1), CONFIG.SLIDESHOW_SECONDS * 1000);
     $("lbSlide").classList.toggle("play", !!slideTimer);
     $("lbSlide").querySelector(".ms").textContent = slideTimer ? "pause" : "play_arrow";
   }
@@ -1467,12 +1572,20 @@ body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locke
     if (e.key === "Escape") tutup();
     else if (e.key === "ArrowRight") { toggleSlide(false); geser(1); }
     else if (e.key === "ArrowLeft") { toggleSlide(false); geser(-1); }
-    else if (e.key === " ") { e.preventDefault(); toggleSlide(); }
+    else if (e.key === " ") {
+      const v = $("lbVid").querySelector("video");
+      if (v) { e.preventDefault(); v.paused ? v.play() : v.pause(); }
+      else if (!tampil[idx]?._vid) { e.preventDefault(); toggleSlide(); }
+    }
     else if (e.key === "f" || e.key === "F") $("lbFav").click();
     else if (e.key === "i" || e.key === "I") lb.classList.toggle("nosheet");
   });
   let sx = null, sy = null;
-  $("lbStage").addEventListener("touchstart", e => { sx = e.touches[0].clientX; sy = e.touches[0].clientY; }, { passive: true });
+  $("lbStage").addEventListener("touchstart", e => {
+    const v = e.target.closest?.("video");
+    if (v && e.touches[0].clientY > v.getBoundingClientRect().bottom - 72) { sx = sy = null; return; }   // area kontrol video
+    sx = e.touches[0].clientX; sy = e.touches[0].clientY;
+  }, { passive: true });
   $("lbStage").addEventListener("touchend", e => {
     if (sx === null) return;
     const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
