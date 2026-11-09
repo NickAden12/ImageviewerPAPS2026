@@ -6,17 +6,21 @@
 <meta name="theme-color" content="#0f131c">
 <title>Photo Gallery</title>
 <!--
-  Google Drive Photo Gallery — v8 ("Atelier Dark" design)
+  Google Drive Photo Gallery — v9 ("Atelier Dark" design, password protected)
   (c) Nick Aden
 
-  SETUP: fill in the CONFIG block below (see PANDUAN_v8.md).
-  The folder can also be changed via URL:  galeri_drive_v8.html?folder=FOLDER_ID&title=Infant%20Baptism
+  SETUP: fill in the CONFIG block below (see PANDUAN_v9.md).
+  The folder can also be changed via URL:  galeri_drive_v9.html?folder=FOLDER_ID&title=Infant%20Baptism
 -->
 <script>
   const CONFIG = {
-    SCRIPT_URL:   "https://script.google.com/macros/s/AKfycbwjlDMirW2uVtAWfAaGV3rmyZPl2lOxuK9DXK8CClmHIoZ3ZTPLk7i-FNp4J5CcAy6T/exec", // Apps Script web app URL (…/exec)
-    API_KEY:      "",                      // (optional, legacy) Google API key — only used when SCRIPT_URL is empty
-    FOLDER_ID:    "1Wnv5NzWKi9Nv0GBAltY-dXD0EE8ipOXy", // Drive folder ID or full folder link (must be allowed in the script)
+    // Data rahasia (Script URL, folder, kunci akses) terenkripsi AES-256-GCM, kunci dari password (PBKDF2-SHA256).
+    // Buat ulang dengan alat_kunci_v9.html bila password / script / folder berubah.
+    LOCKED:       "g1.1000000.d0JeTd5saG2m6413lhipgg.An1x2L5dUfUhB00I.kbOJGeqQZch-QKNkALdNNhI1dOHGP_FODUn8sBdmTHtyWqsWtNK1tGPqDcGx66OL-_PmV8qD93J0LhksJJuFlHl-RKtDkzJKJDNYsFydx1wODBkOCsjewLFaMi6Ko0kVAc7F_hHtcI--K2rKok04C7_JIJ99z2MgltPzUzx7z_RB845d7gkUPYWco2hX-k9mlDjHLGiCWmZDDgnzZNnXx1jri9Dryrcopx5kOOQdkjaer616VlP2WUcZ00QuIbryjrBttdvoFpythXHX2KfAmVJ4q3Th5Xu17Chq2i5YYEoF8A",
+    // Mode tanpa password (opsional): kosongkan LOCKED lalu isi SCRIPT_URL + FOLDER_ID.
+    SCRIPT_URL:   "",
+    API_KEY:      "",
+    FOLDER_ID:    "",
     ORGANIZATION: "PAPS St. Helena",       // small label in the header
     TITLE:        "Kaderisasi Pengurus PAPS 26/28", // big title at the top
     LABEL:        "By: HPDD PAPS 24/26",   // small badge above the title
@@ -28,7 +32,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=arrow_back,auto_awesome,chevron_left,chevron_right,close,collections_bookmark,dashboard_customize,download,favorite,folder,folder_copy,folder_open,folder_special,grid_view,info,link,open_in_new,pause,photo_camera,photo_library,play_arrow,schedule,search,shuffle,view_quilt,zoom_in,zoom_out&display=block">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=arrow_back,auto_awesome,chevron_left,chevron_right,close,collections_bookmark,dashboard_customize,download,favorite,folder,folder_copy,folder_open,folder_special,grid_view,info,key,link,lock,lock_open,open_in_new,pause,photo_camera,photo_library,play_arrow,schedule,search,shuffle,view_quilt,visibility,visibility_off,zoom_in,zoom_out&display=block">
 <style>
 :root{
   --hdr:48px; --nav:52px;
@@ -451,6 +455,37 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   opacity:0;transition:opacity .3s;pointer-events:none;box-shadow:0 8px 24px rgba(0,0,0,.4)}
 .toast.show{opacity:1}
 @media (min-width:1024px){.toast{bottom:32px}}
+/* ---------- Layar password ---------- */
+body.locked{overflow:hidden}
+body.locked .top,body.locked .bnav,body.locked .hero,body.locked .bar,body.locked main{visibility:hidden}
+.lock{position:fixed;inset:0;z-index:200;display:flex;padding:24px 16px;overflow-y:auto;
+  background:radial-gradient(1200px 600px at 20% -10%,rgba(245,158,11,.14),transparent 60%),
+             radial-gradient(900px 500px at 110% 110%,rgba(244,63,94,.10),transparent 60%),var(--floor);
+  transition:opacity .35s ease}
+.lock.out{opacity:0}
+.lk-card{width:100%;max-width:420px;margin:auto;padding:32px 24px 24px;border-radius:28px;text-align:center;
+  background:rgba(19,26,38,.78);backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);
+  border:1px solid rgba(255,255,255,.04);border-top-color:rgba(255,255,255,.14);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.lk-ic{width:64px;height:64px;margin:0 auto 16px;border-radius:50%;display:grid;place-items:center;
+  background:rgba(245,158,11,.14);color:var(--primary);box-shadow:inset 0 0 0 1px rgba(245,158,11,.25)}
+.lk-ic .ms{font-size:30px;max-width:none}
+.lk-org{color:var(--primary);letter-spacing:.12em}
+.lk-title{font:400 clamp(26px,6vw,34px)/1.15 var(--serif);color:var(--text);margin:8px 0 8px;letter-spacing:-.01em;overflow-wrap:anywhere}
+.lk-sub{color:var(--variant);font-size:14px;line-height:20px;margin:0 0 20px}
+.lk-field{display:flex;align-items:center;gap:8px;height:48px;padding:0 4px 0 14px;border-radius:999px;
+  background:var(--c-lowest);border:1px solid var(--line);color:var(--muted);transition:border-color .2s}
+.lk-field:focus-within{border-color:var(--amber)}
+.lk-field input{flex:1;min-width:0;background:none;border:0;outline:0;color:var(--text);font:16px/20px var(--sans);letter-spacing:.04em}
+.lk-field .ib{width:40px;height:40px}
+.lk-rem{display:flex;align-items:center;justify-content:center;gap:8px;margin:14px 0 18px;color:var(--variant);font-size:13px;cursor:pointer}
+.lk-rem input{accent-color:var(--amber);width:16px;height:16px}
+.lk-btn{width:100%;justify-content:center;height:46px;font-size:14px}
+.lk-btn.busy{opacity:.7;pointer-events:none}
+.lk-btn.busy .ms{animation:spin 1s linear infinite}
+.lk-msg{min-height:16px;margin:14px 0 0;color:var(--muted)}
+.lk-msg.err{color:#ffb4ab}
+.shake{animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important}}
 </style>
 </head>
@@ -569,6 +604,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   <h2 id="infoTitle"></h2>
   <p class="desc" id="infoDesc" hidden></p>
   <dl class="kv mono" id="infoKv"></dl>
+  <button class="chip" id="btnLock" hidden style="margin-top:16px"><span class="ms">lock</span>Lock gallery on this device</button>
 </div>
 
 <div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer">
@@ -601,6 +637,23 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 </div>
 <div class="toast" id="toast"></div>
 
+<div class="lock" id="lock" hidden>
+  <form class="lk-card" id="lkForm" autocomplete="off">
+    <div class="lk-ic"><span class="ms fill">lock</span></div>
+    <span class="badge-t lk-org" id="lkOrg"></span>
+    <h1 class="lk-title" id="lkTitle"></h1>
+    <p class="lk-sub">This gallery is private. Enter the password to view the photos.</p>
+    <div class="lk-field">
+      <span class="ms">key</span>
+      <input type="password" id="lkPw" placeholder="Password" aria-label="Password" autocomplete="current-password" autocapitalize="off" spellcheck="false">
+      <button type="button" class="ib" id="lkEye" aria-label="Show password"><span class="ms">visibility</span></button>
+    </div>
+    <label class="lk-rem"><input type="checkbox" id="lkRemember"> Remember on this device</label>
+    <button type="submit" class="chip pri lk-btn" id="lkBtn"><span class="ms fill">lock_open</span>Unlock</button>
+    <p class="lk-msg mono" id="lkMsg" role="status" aria-live="polite"></p>
+  </form>
+</div>
+
 <script>
 (() => {
   "use strict";
@@ -619,11 +672,24 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   };
 
   // ---------- Konfigurasi ----------
-  const scriptUrl = (CONFIG.SCRIPT_URL || (CONFIG.API_KEY ? "" : store.get("galeri_script_url"))).trim();
-  const apiKey  = scriptUrl ? "" : (CONFIG.API_KEY || store.get("galeri_api_key"));
-  const rootId  = extractId(params.get("root") || params.get("folder") || CONFIG.FOLDER_ID || store.get("galeri_folder"));
-  const folderId = extractId(params.get("folder") || rootId);
-  const isRoot  = folderId === rootId;
+  const terkunci = !!CONFIG.LOCKED;
+  let scriptUrl = "", apiKey = "", rootId = "", folderId = "", isRoot = true, kunciAkses = "";
+  // sumber data: dari payload hasil dekripsi (mode password) atau dari CONFIG biasa
+  function aturSumber(pl){
+    if (pl) {
+      scriptUrl = (pl.s || "").trim(); apiKey = ""; kunciAkses = pl.k || "";
+      rootId = extractId(params.get("root") || pl.f || "");
+    } else {
+      scriptUrl = (CONFIG.SCRIPT_URL || (CONFIG.API_KEY ? "" : store.get("galeri_script_url"))).trim();
+      apiKey = scriptUrl ? "" : (CONFIG.API_KEY || store.get("galeri_api_key"));
+      rootId = extractId(params.get("root") || params.get("folder") || CONFIG.FOLDER_ID || store.get("galeri_folder"));
+    }
+    folderId = extractId(params.get("folder") || rootId);
+    isRoot = folderId === rootId;
+    favKey = "galeri_fav_" + rootId;
+    favs.clear();
+    try { JSON.parse(store.get(favKey) || "[]").forEach(x => favs.add(x)); } catch {}
+  }
   const judul   = params.get("title") || params.get("judul") || CONFIG.TITLE;
   const org     = CONFIG.ORGANIZATION || "";
 
@@ -689,8 +755,8 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   let semua = [], tampil = [], subs = [], folderName = "", byId = {};
   let dirender = 0, layout = store.get("galeri_layout") || "kolase", view = "galeri";
   let idx = -1, slideTimer = null, heroTimer = null;
-  const favKey = "galeri_fav_" + rootId;
-  const favs = new Set((() => { try { return JSON.parse(store.get(favKey) || "[]"); } catch { return []; } })());
+  let favKey = "";
+  const favs = new Set();
 
   if (!["kolase", "masonry", "grid"].includes(layout)) layout = "kolase";
 
@@ -770,6 +836,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
 
   // ---------- Apps Script (disarankan) ----------
   async function skrip(q){
+    if (kunciAkses) q = { ...q, key: kunciAkses };
     const r = await fetch(scriptUrl + (scriptUrl.includes("?") ? "&" : "?") + new URLSearchParams(q));
     const t = await r.text();
     let j;
@@ -821,6 +888,7 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
       }
       tulisCatatan();
     } catch (e) {
+      if (terkunci && /ACCESS_DENIED/.test(e.message)) { lupakan(); return tampilKunci("This gallery's access key has changed. Please enter the password again."); }
       $("stats").textContent = "Failed to load";
       $("status").className = "status err";
       $("status").innerHTML = `Couldn't load photos: ${esc(e.message)}
@@ -1372,8 +1440,86 @@ h1.hero-t{font-family:var(--serif);font-weight:400;font-size:clamp(32px,5.2vw,64
   }, { passive: true });
   mqHP.addEventListener?.("change", () => setUi(false));
 
-  // ---------- Mulai ----------
-  if (!(scriptUrl || apiKey) || !rootId) showSetup(); else muat();
+  // ---------- Kunci password (AES-256-GCM + PBKDF2-SHA256) ----------
+  const AAD = new TextEncoder().encode("galeri-drive:v1");
+  const b64d = t => Uint8Array.from(atob(t.replace(/-/g, "+").replace(/_/g, "/")), c => c.charCodeAt(0));
+  const kunciIngat = "galeri_unlock_" + (CONFIG.LOCKED || "").slice(-24);
+  async function dekripsi(pw){
+    const [ver, iter, salt, iv, ct] = CONFIG.LOCKED.split(".");
+    if (ver !== "g1") throw new Error("format");
+    const bahan = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw.normalize("NFC")), "PBKDF2", false, ["deriveKey"]);
+    const key = await crypto.subtle.deriveKey({ name: "PBKDF2", salt: b64d(salt), iterations: +iter, hash: "SHA-256" },
+      bahan, { name: "AES-GCM", length: 256 }, false, ["decrypt"]);
+    const pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: b64d(iv), additionalData: AAD }, key, b64d(ct));
+    return JSON.parse(new TextDecoder().decode(pt));
+  }
+  function ingatan(){
+    let t = "";
+    try { t = sessionStorage.getItem(kunciIngat) || ""; } catch {}
+    if (!t) t = store.get(kunciIngat);
+    try { return t ? JSON.parse(t) : null; } catch { return null; }
+  }
+  function lupakan(){
+    try { sessionStorage.removeItem(kunciIngat); } catch {}
+    try { localStorage.removeItem(kunciIngat); } catch {}
+  }
+  function tampilKunci(pesan){
+    document.body.classList.add("locked");
+    const el = $("lock");
+    el.hidden = false;
+    $("lkOrg").textContent = CONFIG.ORGANIZATION || "";
+    $("lkTitle").textContent = CONFIG.TITLE || "Gallery";
+    $("lkMsg").textContent = pesan || "";
+    $("lkMsg").classList.toggle("err", !!pesan);
+    setTimeout(() => $("lkPw").focus(), 60);
+  }
+  function mulai(pl){
+    document.body.classList.remove("locked");
+    $("lock").hidden = true;
+    aturSumber(pl);
+    $("btnLock").hidden = !terkunci;
+    if (!(scriptUrl || apiKey) || !rootId) showSetup(); else muat();
+  }
+  if (terkunci) {
+    if (!window.crypto?.subtle) {
+      tampilKunci("This browser can't decrypt the gallery. Open it over https:// in an up-to-date browser.");
+    } else {
+      const pl = ingatan();
+      if (pl) mulai(pl); else tampilKunci();
+    }
+    $("lkEye").onclick = () => {
+      const on = $("lkPw").type === "password";
+      $("lkPw").type = on ? "text" : "password";
+      $("lkEye").querySelector(".ms").textContent = on ? "visibility_off" : "visibility";
+    };
+    $("lkForm").onsubmit = async e => {
+      e.preventDefault();
+      const pw = $("lkPw").value;
+      if (!pw) return;
+      $("lkBtn").disabled = true; $("lkBtn").classList.add("busy");
+      $("lkMsg").classList.remove("err"); $("lkMsg").textContent = "Unlocking…";
+      await new Promise(r => setTimeout(r, 30));
+      try {
+        const pl = await dekripsi(pw);
+        const json = JSON.stringify(pl);
+        try { sessionStorage.setItem(kunciIngat, json); } catch {}
+        if ($("lkRemember").checked) store.set(kunciIngat, json);
+        $("lkPw").value = "";
+        $("lock").classList.add("out");
+        setTimeout(() => { $("lock").classList.remove("out"); mulai(pl); }, 350);
+      } catch {
+        $("lkMsg").textContent = "Wrong password. Please try again.";
+        $("lkMsg").classList.add("err");
+        $("lkForm").classList.remove("shake"); void $("lkForm").offsetWidth; $("lkForm").classList.add("shake");
+        $("lkPw").select();
+      } finally {
+        $("lkBtn").disabled = false; $("lkBtn").classList.remove("busy");
+      }
+    };
+    $("btnLock").onclick = () => { lupakan(); location.href = location.pathname; };
+  } else {
+    mulai(null);
+  }
 })();
 </script>
 </body>
